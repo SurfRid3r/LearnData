@@ -6,8 +6,8 @@
     <link>https://newzone.top/</link>
     <description>开源工具、效率方法、心理学探索的自我提升笔记，记录并输出一切能让自己提升的知识。</description>
     <language>zh-CN</language>
-    <pubDate>Thu, 30 Mar 2023 16:22:44 GMT</pubDate>
-    <lastBuildDate>Thu, 30 Mar 2023 16:22:44 GMT</lastBuildDate>
+    <pubDate>Thu, 06 Apr 2023 15:43:27 GMT</pubDate>
+    <lastBuildDate>Thu, 06 Apr 2023 15:43:27 GMT</lastBuildDate>
     <generator>vuepress-plugin-feed2</generator>
     <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
     <copyright>Copyright by 清顺</copyright>
@@ -18,13 +18,224 @@
     </image>
     <category>工具</category>
     <item>
-      <title></title>
-      <link>https://newzone.top/posts/sqlmap%E6%BA%90%E7%A0%81%E5%AD%A6%E4%B9%A0.html</link>
-      <guid>https://newzone.top/posts/sqlmap%E6%BA%90%E7%A0%81%E5%AD%A6%E4%B9%A0.html</guid>
-      <source url="https://newzone.top/rss.xml"></source>
-      <description>test</description>
-      <pubDate>Wed, 29 Mar 2023 16:39:44 GMT</pubDate>
-      <content:encoded><![CDATA[<p>test</p>
+      <title>sqlmap源码学习</title>
+      <link>https://newzone.top/posts/%E5%BC%80%E6%BA%90%E5%B7%A5%E5%85%B7%E5%88%86%E6%9E%90/sqlmap%E6%BA%90%E7%A0%81%E5%AD%A6%E4%B9%A0.html</link>
+      <guid>https://newzone.top/posts/%E5%BC%80%E6%BA%90%E5%B7%A5%E5%85%B7%E5%88%86%E6%9E%90/sqlmap%E6%BA%90%E7%A0%81%E5%AD%A6%E4%B9%A0.html</guid>
+      <source url="https://newzone.top/rss.xml">sqlmap源码学习</source>
+      <description>sqlmap工具学习 ​	笔者对于 sqlmap 的部分源码详细分析笔记存放于sqlmap源码分析此处，该文章的主要目的是归纳，总结，只会列举一些笔者觉得可以借鉴的点。 sqlmap检测流程 sqlmap的主要流程如下，详细可见笔记。</description>
+      <pubDate>Fri, 31 Mar 2023 00:00:00 GMT</pubDate>
+      <content:encoded><![CDATA[<h1> sqlmap工具学习</h1>
+<p>​	笔者对于 sqlmap 的部分源码详细分析笔记存放于<a href="https://notes.surfrid3r.top/Security/Web/SQL%E6%B3%A8%E5%85%A5/Sqlmap/sqlmap%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/" target="_blank" rel="noopener noreferrer">sqlmap源码分析</a>此处，该文章的主要目的是归纳，总结，只会列举一些笔者觉得可以借鉴的点。</p>
+<h2> sqlmap检测流程</h2>
+<p>sqlmap的主要流程如下，详细可见笔记。</p>
+<figure><figcaption>sqlmap源码学习</figcaption></figure>
+<h2> sqlmap的核心函数</h2>
+<p>在分析sqlmap时会发现存在几个函数非常重要，在sqlmap的各个阶段都能够看见存在调用，详见<a href="https://notes.surfrid3r.top/2023/02/07/sqlmap%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/" target="_blank" rel="noopener noreferrer">sqlmap核心函数分析</a>：</p>
+<h2> sqlmap的核心技术</h2>
+<h3> sqlmap的指纹识别</h3>
+<p>sqlmap整个流程中有收集target站点信息以及多种类型的指纹，每一种指纹类型都是为了帮助 sqlmap 在后续的不同sql注入类型测试中去降低发送payload的测试范围，能够更加快速的完成注入检测。主要的指纹类型识别有如下几大类：</p>
+<ul>
+<li>
+<p>操作系统</p>
+</li>
+<li>
+<p>WAF类型</p>
+</li>
+<li>
+<p>服务器类型</p>
+</li>
+<li>
+<p>DBMS数据库类型</p>
+</li>
+</ul>
+<p>接下来分析这几种指纹，sqlmap 是如何识别的。</p>
+<h4> 操作系统、DBMS和服务器指纹识别</h4>
+<p>sqlmap 关于操作系统和服务器指纹的识别在<a href="https://notes.surfrid3r.top/2023/02/12/sqlmap%E6%A0%B8%E5%BF%83%E5%87%BD%E6%95%B0%E5%88%86%E6%9E%90/#2-process-response" target="_blank" rel="noopener noreferrer">conet.queryPage</a>函数中。sqlmap 在收发数据包时会进行响应内容的指纹识别，并且识别出的目标指纹信息更新到<code>kb.headersFp</code>全局变量中。</p>
+<h5> 基于HTTP header的指纹识别</h5>
+<p>其对应的指纹文件位于 <code>sqlmap/data/xml/banner/</code> 路径下，主要的如下（主要是基于 HTTP Header的指纹识别）：</p>
+<ul>
+<li><code>sharepoint.xml</code> - 识别 SharePoint 服务器</li>
+<li><code>server.xml</code> -识别各种类型服务器和操作系统（IIS, Apache, Nginx, GoogleWebServer, lighttpd, OpenResty, LiteSpeed, SunONE）* (Windows，各种类型的 Linux 操作系统)</li>
+<li><code>servlet-engine.xml</code> - 识别 Java Servlet 中间件</li>
+<li><code>set-cookie.xml</code> - 通过 cookie 参数类型识别语言或者 CMS</li>
+<li><code>x-aspnet-version.xml</code> - 识别 ASP. NET 版本</li>
+<li><code>x-powered-by.xml</code> - 通过 x-powered-by 识别语言或者 CMS</li>
+<li><code>generic.xml</code> - 通用的字段，会尝试匹配所有的 Headers，主要是识别操作系统</li>
+</ul>
+<h5> 基于HTTP ResponseBody的指纹识别</h5>
+<p>不同于上述的指纹识别，基于响应包内容的识别是针对报错信息的识别。sqlmap 先通过简单的正则<code>SQL (warning|error|syntax)</code>匹配，再同<code>errors.xml</code>中的数据库指纹信息匹配，主要是用来识别DBMS类型的。</p>
+<ul>
+<li><code>errors.xml</code> - 识别 DMBS 类型</li>
+</ul>
+<h5> sql注入后的DBMS版本识别</h5>
+<p>为了能够再后利用中更加精准的查询，sqlmap 在除了识别 DMBS 的类型后，还会尽可能的去识别 DBMS 的具体版本类型（因为版本差距较大的数据库往往可能函数甚至是库都是不同的）。以 <code>mysql</code> 为例，sqlmap 是测试不同 <code>mysql</code> 版本的特性语句或者数据库是否存在来推测数据库的大致版本范围（详见 <a href="https://notes.surfrid3r.top/2023/02/12/sqlmap%E6%A0%B8%E5%BF%83%E5%87%BD%E6%95%B0%E5%88%86%E6%9E%90/#check-dbms" target="_blank" rel="noopener noreferrer">checkDbms函数</a>）</p>
+<h4> WAF指纹识别</h4>
+<ol>
+<li>
+<p>sqlmap 本身是存在 WAF 检测函数即 check_waf()，该函数的功能非常弱，只能够检测是否存在 WAF，不具备 WAF 类型指纹的识别，其主要原理是通过发送一段明显恶意的 payload，然后判断响应包内容和正常请求的响应页面的相似度是否小于<code>IPS_WAF_CHECK_RATIO = 0.5</code>，若满足 sqlmap 会认为存在 WAF，之后便会推荐你使用 tamper 脚本进行绕过。（详见<a href="https://note.surfrid3r.top/Security/Web/SQL%E6%B3%A8%E5%85%A5/Sqlmap/sqlmap%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/#2-1-6-check-waf" target="_blank" rel="noopener noreferrer">checkWaf分析</a>）</p>
+<div class="language-python line-numbers-mode" data-ext="py"><div class="line-numbers" aria-hidden="true"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div></li>
+<li>
+<p>sqlmap 能够识别 WAF 指纹的功能其实属于第三方插件，主要功能代码位于 <code>sqlmap\thirdparty\identywaf</code> 下，其来源是该 Github 上的仓库: <a href="https://github.com/stamparm/identYwaf%E3%80%82sqlmap" target="_blank" rel="noopener noreferrer">https://github.com/stamparm/identYwaf。sqlmap</a> 默认会在前10个响应数据包中，去匹配<code>data,json</code>中各类 WAF 的 regex正则规则，如果命中则判断存在对于类型 WAF。</p>
+<div class="language-json line-numbers-mode" data-ext="json"><div class="line-numbers" aria-hidden="true"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div></li>
+<li>
+<p>此外，还存在<code>signatures</code>字段，sqlmap并没有使用该字段。该字段相关资料可以参考：<a href="https://www.slideshare.net/stamparm/blind-waf-identification%E3%80%82%E9%A1%BA%E4%BE%BF%E5%88%86%E6%9E%90%E4%BA%86%E4%B8%80%E4%B8%8B%60identYwaf%60%E5%AF%B9%E8%AF%A5%E5%AD%97%E6%AE%B5%E7%9A%84%E4%BD%BF%E7%94%A8%E3%80%82%EF%BC%88%E8%AF%A6%E8%A7%81" target="_blank" rel="noopener noreferrer">https://www.slideshare.net/stamparm/blind-waf-identification。顺便分析了一下`identYwaf`对该字段的使用。（详见</a><a href="https://notes.surfrid3r.top/2023/04/05/identYwaf/#signatures" target="_blank" rel="noopener noreferrer">identYwaf signature分析</a>）</p>
+<div class="language-python line-numbers-mode" data-ext="py"><div class="line-numbers" aria-hidden="true"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div></li>
+</ol>
+<h3> sqlmap的Request.queryPage函数</h3>
+<p><code>Request.queryPage</code> 函数是 sqlmap 中重要的请求函数，所有的发送请求函数都是调用该接口。在 sqlmap 源码中看到有大量的使用，因此该函数的分析是非常重要（详见<a href="https://notes.surfrid3r.top/2023/02/12/sqlmap%E6%A0%B8%E5%BF%83%E5%87%BD%E6%95%B0%E5%88%86%E6%9E%90/#request-query-page" target="_blank" rel="noopener noreferrer">Request.queryPage</a>），此处仅作标记。</p>
+
+<h3> sqlmap的一些检测</h3>
+<ul>
+<li>sqlmap会对网站的动态性进行检测，目的是为了提高页面相似度判断的准确率，详见<a href="https://notes.surfrid3r.top/2023/02/20/sqlmap%E7%9A%84%E9%A1%B5%E9%9D%A2%E7%9B%B8%E4%BC%BC%E5%BA%A6%E5%88%A4%E6%96%AD/#check-stability" target="_blank" rel="noopener noreferrer">checkStability</a></li>
+<li>sqlmap会对网站中的动态元素（广告等）进行检测，并且在相似度比较时会去除掉这些动态元素（removeDynamicContent），详见<a href="https://notes.surfrid3r.top/2023/02/20/sqlmap%E7%9A%84%E9%A1%B5%E9%9D%A2%E7%9B%B8%E4%BC%BC%E5%BA%A6%E5%88%A4%E6%96%AD/#find-dynamic-content" target="_blank" rel="noopener noreferrer">findDynamicContent</a></li>
+<li>sqlmap会对url参数进行检测，如果时静态参数就不会对该参数进行sql注入测试，详见<a href="https://notes.surfrid3r.top/2023/02/07/sqlmap%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/#2-2-1-check-dyn-param" target="_blank" rel="noopener noreferrer">checkDynParam</a></li>
+<li>如果开启<code>--null-connection</code>用于加速检测，sqlmap 还会进行 <a href="https://notes.surfrid3r.top/2023/02/07/sqlmap%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/#2-1-7-check-null-connection" target="_blank" rel="noopener noreferrer">checkNullConnection</a>.checkNullConnection是一种能大量节省带宽的测试方法，不接收响应Body，只通过HTTP Header中返回的<code>Content-Length</code>或者<code>Range</code>字段来获取响应Body长度，从而判断是否输入成功。（能够支持的该类检测的只有布尔盲注）</li>
+</ul>
+<h3> sqlmap的payload</h3>
+<h4> payload过滤</h4>
+<p>sqlmap 的测试 payload 模板均位于<code>.\data\xml\payloads\boolean_blind.xml</code>目录下，数量是非常庞大的。并且一个 payload 模板往往需要花费的不只是一个请求数据包，而是数十个甚至上百个。那么一次性全部发送不然是不行的，非常耗时，sqlmap 在具体测试会使用许多过滤条件来尽可能的减少无意义 payload 的发送数量。下面列举一些 sqlmap 过滤 payload 的方式</p>
+<ul>
+<li>通过<code>risk</code> 和 <code>level</code> 命令行参数控制，不同<code>risk</code>和<code>level</code>等级的 payload 的检测位置和需要测试的请求包都是不一样的（详见<a href="https://notes.surfrid3r.top/2023/02/12/sqlmap%E7%9A%84level%E5%92%8Crisk%E7%AD%89%E7%BA%A7%E5%AE%9A%E4%B9%89/" target="_blank" rel="noopener noreferrer">sqlmap的level和risk等级定义</a>）</li>
+<li>通过指纹的识别，只使用对应 DBMS 类型的 payload 测试。</li>
+<li>如果别的类型的sql注入已经测试成功，那么测试不同类型的sql注入时不会使用相同<code>&lt;clause&gt;</code>标签的payload.</li>
+</ul>
+<h4> payload模板</h4>
+<p>sqlmap 的 payload 由两部分组成： <code>boundaries.xml</code>中的界定符 和 <code>payloads/*.xml</code>中的各类sql注入的 payload模板（详见<a href="https://notes.surfrid3r.top/2023/02/26/sqlmap%E7%9A%84XML%E6%96%87%E4%BB%B6/" target="_blank" rel="noopener noreferrer">sqlmap的xml文件</a>）。这些都位于XML文件中。</p>
+<ol>
+<li>其中 payload 还包含大量的特殊字符串，用于在生成模板的时候进行替换，主要包含积累：</li>
+</ol>
+<ul>
+<li>随机字符</li>
+<li>分隔符（用于在报错注入等回显型注入的时候在响应包中匹配内容）</li>
+<li>时延</li>
+<li>注释符</li>
+<li>后利用语句标记（<code>[INFERENCE]</code>）</li>
+</ul>
+<ol start="2">
+<li>xml 文件中还包含了对应payload是否攻击成功的判定（详见<a href="https://notes.surfrid3r.top/2023/02/26/sqlmap%E7%9A%84XML%E6%96%87%E4%BB%B6/" target="_blank" rel="noopener noreferrer">sqlmap的xml文件</a>）</li>
+</ol>
+<p>不过这里需要注意的是其中两种类型中的<code>where</code>标签，<code>where</code>标签分为三种数值，这决定了如何处理原始参数后的数值同 sqlmap 添加的 payload的关系，是直接拼接，取负后拼接还是替换，这是会影响后续sql注入效果的。</p>
+<ol>
+<li>将注入 payload 添加到注入参数的原始数值前。</li>
+<li>将注入参数的原始数值替换为一个负随机值并在这之后添加注入</li>
+<li>用 payload 替换掉注入参数的原始数值。</li>
+</ol>
+<h4> payload编码绕过</h4>
+<ol>
+<li>
+<p>实际测试中，可以看到从xml中渲染的 payload 到 sqlmap 真实发送给目标站点的 payload,其实对内容进行了hex、base64编码等操作。</p>
+<ul>
+<li>
+<p>base64编码、特殊字符的替换和编码详见：<a href="https://notes.surfrid3r.top/2023/02/12/sqlmap%E6%A0%B8%E5%BF%83%E5%87%BD%E6%95%B0%E5%88%86%E6%9E%90/#adjust-late-values" target="_blank" rel="noopener noreferrer">ajustLateValues函数</a></p>
+</li>
+<li>
+<p>hex等编码，sqlmap 默认存在<code>Syntax</code>类，位于<code>sqlmap\plugins\generic\syntax.py</code>,在发送payload之前该函数会被调用。</p>
+<div class="language-Python line-numbers-mode" data-ext="Python"><div class="line-numbers" aria-hidden="true"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>并且当确认了具体的DMBS类型，会设置对应的handler,<code>.\plugins\dbms\*</code>下每个数据库也会重写该 escape 函数，以 mysql 为例如下。mysql将引号内字符进行16进制编码。</p>
+<div class="language-python line-numbers-mode" data-ext="py"><div class="line-numbers" aria-hidden="true"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div></li>
+</ul>
+</li>
+<li>
+<p>另外 sqlmap 还支持 tamper 脚本，对 payload 进行二次处理从而尝试进行针对性绕过,详见<a href="https://notes.surfrid3r.top/2023/02/12/sqlmap%E6%A0%B8%E5%BF%83%E5%87%BD%E6%95%B0%E5%88%86%E6%9E%90/#payload" target="_blank" rel="noopener noreferrer">payload函数</a></p>
+</li>
+</ol>
+<h3> sqlmap的sql注入攻击成功检测</h3>
+<p>为了检测SQL注入攻击是否成功，sqlmap需要根据相应的payload结果进行判断。不同类型的payload判断方式不同，而这些判断方式都写在<code>payloads/*.xml</code>的单个payload文件中。sqlmap主要分为以下四种判断类型：</p>
+<ul>
+<li>时间盲注</li>
+<li>布尔盲注</li>
+<li>报错注入和内联注入</li>
+<li>Union注入</li>
+</ul>
+<h4> 时间盲注</h4>
+<p>时间盲注的 payload 位于<code>time_blind.xml</code>中,以其中一个为例来说明 sqlmap 的时间盲注检测逻辑。首先是对应的 payload 模板如下：</p>
+<div class="language-xml line-numbers-mode" data-ext="xml"><div class="line-numbers" aria-hidden="true"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>可以看到发送的 payload 位于 <code>request.payload</code> 中，而检测逻辑则位于 <code>reponse</code>中。该 payload 如果攻击成功（还要加上<code>boundaries.xml</code>中的分隔符），则会产生<code>SLEEPTIME</code>秒时延，如果满足条件则认为 对应的 payload + 对应的 boundary 组合的payload模板即为注入点。具体的检测逻辑详见<a href="https://notes.surfrid3r.top/2023/02/12/sqlmap%E6%A0%B8%E5%BF%83%E5%87%BD%E6%95%B0%E5%88%86%E6%9E%90/#time" target="_blank" rel="noopener noreferrer">sqlmap_time</a>。</p>
+<p>另外，如果没有手动设置<code>--timeSec</code>参数，sqlmap将计算站点的平均响应时长，并且会持续更新以防止异常的网络波动对检测造成大量干扰。在进行时间盲注检测之前，sqlmap通常会发送至少30个数据包，并以队列形式保存这些响应时间（最多不超过200个）。如果当前响应时间超过了 <code>MAX(MIN_VALID_DELAYED_RESPONSE, 平均时延+7 * deviation)</code> 的时长（<code>MIN_VALID_DELAYED_RESPONSE</code>=0.5），则sqlmap会判断该请求存在时延。</p>
+<h4> 布尔盲注</h4>
+<p>布尔盲注的 payload 位于<code>boolean_blind.xml</code>,同样以其中一个为例说明：</p>
+<div class="language-XML line-numbers-mode" data-ext="XML"><div class="line-numbers" aria-hidden="true"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>可以看到<code>request.payload</code>和<code>request.comparison</code>会生成两种payload，并且逻辑上是相反。sqlmap 正是会判断这两种页面的相似度来判断是否攻击成功，详见<a href="https://notes.surfrid3r.top/2023/02/12/sqlmap%E6%A0%B8%E5%BF%83%E5%87%BD%E6%95%B0%E5%88%86%E6%9E%90/#comparison" target="_blank" rel="noopener noreferrer">sqlmap_comparison</a>。</p>
+<h5> 页面相似度判断</h5>
+<p>另外值得一说的就是sqlmap对应页面相似的判断逻辑，详见<a href="https://notes.surfrid3r.top/2023/02/20/sqlmap%E7%9A%84%E9%A1%B5%E9%9D%A2%E7%9B%B8%E4%BC%BC%E5%BA%A6%E5%88%A4%E6%96%AD/" target="_blank" rel="noopener noreferrer">sqlmap 的页面相似度判断</a>。在判断页面相似度前，sqlmap 会响应页面内容进行了大量的排除无意义内容来提高正确率：</p>
+<ul>
+<li>
+<p>检测网站动态型，尝试去除掉动态元素</p>
+</li>
+<li>
+<p>即去除掉 HTML 中的 script, style 和 comment 等标签内容，提取纯文本标签中的内容。</p>
+</li>
+<li>
+<p>对于高动态页面会调用更精准的相似度计算函数</p>
+</li>
+<li>
+<p>sqlmap 会不断根据历史请求调整相似度的阈值。</p>
+</li>
+</ul>
+<h4> 报错注入和内联注入</h4>
+<p>报错注入和内联注入的检测逻辑比较检测，以其中一个为例：</p>
+<div class="language-XML line-numbers-mode" data-ext="XML"><div class="line-numbers" aria-hidden="true"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p><code>request.payload</code>和<code>response.grep</code>中包含两个特殊字符<code>DELIMITER_START</code>和<code>[DELIMITER_STOP]</code>，这些特殊字符被用作分割符。在发送payload之前，sqlmap会替换这些特殊字符为随机字符。如果注入成功，响应包中会存在与分割符包裹的查询结果，因此可以使用<code>response.grep</code>生成的正则表达式进行匹配，具体的检测逻辑详见<a href="https://notes.surfrid3r.top/2023/02/12/sqlmap%E6%A0%B8%E5%BF%83%E5%87%BD%E6%95%B0%E5%88%86%E6%9E%90/#grep" target="_blank" rel="noopener noreferrer">sqlmap_grep</a>。</p>
+<h4> Union注入</h4>
+<p>union注入的攻击成功判别比较复杂，sqlmap 在这个过程中不仅会判断是否可能存在Union注入，还存进行推测注入点所在的具体位置，因此会消耗大量的数据包进行推测。以其中一个为例(需要说明的是<code>union_query.xml</code>中的 payload 模板都非常相似，一般只有<code>columns</code>和<code>char</code>两个标签的区别，即不同的推测列数范围和使用字符。)，详见<a href="https://notes.surfrid3r.top/2023/02/12/sqlmap%E6%A0%B8%E5%BF%83%E5%87%BD%E6%95%B0%E5%88%86%E6%9E%90/#union" target="_blank" rel="noopener noreferrer">sqlmap_union</a>。</p>
+<div class="language-XML line-numbers-mode" data-ext="XML"><div class="line-numbers" aria-hidden="true"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><ol>
+<li>
+<p>首先需要确认是否可能存在sql注入，sqlmap首先对比 <code>order by 1</code> 和 <code>order by randomInt()</code> 的响应包页面内容,如果不同就可能存在注入点。</p>
+</li>
+<li>
+<p>然后就是要确定列数，<code>[COLSTART]</code>和<code>[COLSTOP]</code>标明了 Union注入要推测的列数范围，之后 sqlmap 会通过 <code>order by</code> 或者 <code>union all</code>的方式去在该范围内暴力破解列数（二分法测试，当第 n+1 列与原始页面不同，且第 n 例与原始页面相同时就得到了实际的列数）。</p>
+<div class="language-bash line-numbers-mode" data-ext="sh"><div class="line-numbers" aria-hidden="true"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div></li>
+<li>
+<p>得到列数后，sqlmap还需要推测可注入点在这些列数中的具体位置（position）,只在对应的列中使用随机数，然后再去匹配响应包内容，如果命中对应的position即使对应的位置。</p>
+<div class="language-bash line-numbers-mode" data-ext="sh"><div class="line-numbers" aria-hidden="true"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div></li>
+</ol>
+<h3> sqlmap的攻击成功数据获取（getValue）</h3>
+<p>在获取注入点和注入模板之后，接下来的步骤是利用这些信息去获取数据。为了方便不同类型的SQL注入通过相应的模板获取数据，sqlmap将其统一封装到了<code>getValue</code>函数中。只需提供SQL语句，该函数就能返回结果，接下来分析下sqlmap是如何做到的。（注入模板对应的是 <code>payloads/*.xml</code> 中 <code>vector</code> 标签内的内容。一般都会存在一些特殊标签（例如 <code>[QUERY]</code>, <code>[INFERENCE]</code>），用于替换<code>queries.xml</code>中具体的语句。）</p>
+<p>sqlmap 将不同类型sql注入分为两类，根据不同的类型调用的方式也不同：</p>
+<ol>
+<li>回显类型（报错注入，内联注入和union注入），直接提取响应页面中内容即可。</li>
+<li>盲注类型（时间盲注和布尔盲注），该类型根据页面的返回结果只能得到 <code>True/False</code> 两种结果，因此如果需要获取内容需要通过<code>ord</code>等函数进行大量的数据包推测。</li>
+</ol>
+<h4> 回显类型</h4>
+<p>直接替换模板中的<code>[QUERY]</code>标签即可，匹配时通过分割符<code>DELIMITER_START</code>,<code>[DELIMITER_STOP]</code>即可进行定位。</p>
+<h4> 盲注类型</h4>
+<p>该类型获取内容的方式分为两种：</p>
+<ol>
+<li>
+<p>只需要获取<code>True/False</code>结果即可（<a href="https://notes.surfrid3r.top/2023/02/12/sqlmap%E6%A0%B8%E5%BF%83%E5%87%BD%E6%95%B0%E5%88%86%E6%9E%90/#go-boolean-proxy" target="_blank" rel="noopener noreferrer">_goBooleanProxy函数</a>），这种也非常方便。替换掉<code>[INFERENCE]</code>标签为查询语句即可，时间盲注则判断响应时间；布尔盲注则判断页面相似度。</p>
+<div class="language-python line-numbers-mode" data-ext="py"><div class="line-numbers" aria-hidden="true"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div></li>
+<li>
+<p>如果要获取内容(<a href="https://notes.surfrid3r.top/2023/02/12/sqlmap%E6%A0%B8%E5%BF%83%E5%87%BD%E6%95%B0%E5%88%86%E6%9E%90/#go-inference-proxy" target="_blank" rel="noopener noreferrer">_goInferenceProxy函数</a>),则比较麻烦。需要替换掉<code>[INFERENCE]</code>标签为<code>queries.xml</code>中<code>INFRENCE</code>对应的语句，并且不断的通过二分法进行缩小范围测试.</p>
+<div class="language-python line-numbers-mode" data-ext="py"><div class="line-numbers" aria-hidden="true"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>以 mysql 为例，简述步骤：</p>
+<ol>
+<li>盲注需要获取的 payload 为 <code>SELECT DISTINCT(IFNULL(CAST(schema_name AS NCHAR)</code></li>
+<li>inference 标签对于的模板为 <code>ORD(MID((%s),%d,1))&gt;%d</code>：</li>
+</ol>
+<ul>
+<li><code>%s</code> 替换为 payload</li>
+<li>剩余的两个 <code>%d</code> 为测试字符的 index 和推测的字符</li>
+</ul>
+<ol start="3">
+<li>
+<p>最后逐个测试的过程如下：</p>
+<div class="language-bash line-numbers-mode" data-ext="sh"><div class="line-numbers" aria-hidden="true"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div></li>
+</ol>
+</li>
+</ol>
+<h3> sqlmap的注入后利用</h3>
+<p>sqlmap 的注入后利用主要分为4类：</p>
+<ul>
+<li>数据库基础信息获取-Enumeration</li>
+<li>数据库用户信息获取-Users</li>
+<li>数据库内容获取-Database</li>
+<li>接管操作系统-takeover</li>
+</ul>
+<p>主要的语句的都位于<code>queries.xml</code>的各个标签中，之前利用的时候可以进行参考。</p>
+<h3> 其他</h3>
+<p>待补充</p>
+<h2> 参考链接</h2>
+<ul>
+<li><a href="https://github.com/sqlmapproject/sqlmap/wiki/Usage" target="_blank" rel="noopener noreferrer">sqlmap Usage</a></li>
+<li><a href="https://sqlmap.highlight.ink/" target="_blank" rel="noopener noreferrer">sqlmap 用户手册中文版</a></li>
+<li><a href="https://www.anquanke.com/post/id/262848" target="_blank" rel="noopener noreferrer">sqlmap 项目剖析_tlmn</a></li>
+<li><a href="https://zhuanlan.zhihu.com/p/43242220" target="_blank" rel="noopener noreferrer">sqlmap 内核分析_v1ll4n</a></li>
+</ul>
 ]]></content:encoded>
     </item>
     <item>
